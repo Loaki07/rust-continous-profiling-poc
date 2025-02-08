@@ -1,6 +1,7 @@
-# Rust Profiling System POC
+# Rust Continuous Profiling POC
 
-A proof-of-concept system for collecting, processing, and visualizing performance profiles from Rust applications.
+A proof-of-concept system for continuous profiling of Rust applications, enabling real-time
+performance monitoring and analysis through flame graphs.
 
 ## Installation
 

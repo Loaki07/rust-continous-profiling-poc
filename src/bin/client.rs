@@ -128,78 +128,90 @@ async fn async_complex_work() {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    log::info!("Starting profiling...");
+    let task_type = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "mixed".to_string());
+
+    log::info!("Starting profiling for task type: {}", task_type);
     let guard = ProfilerGuard::new(100).unwrap();
 
-    // Spawn multiple threads with diverse workloads
-    let handles: Vec<_> = (0..4).map(|i| {
-        thread::spawn(move || {
-            match i {
-                0 => {
-                    // CPU-intensive thread
-                    log::info!("Starting CPU-intensive work");
-                    for _ in 0..2 {
-                        let _ = binary_tree_sum(15);
-                        let _ = fibonacci(30);
-                        let _ = heavy_computation(50_000);
+    // Execute the requested task type
+    match task_type.as_str() {
+        "cpu" => {
+            log::info!("Running CPU intensive task");
+            for _ in 0..2 {
+                let _ = binary_tree_sum(15);
+                let _ = fibonacci(30);
+                let _ = heavy_computation(50_000);
+            }
+        },
+        "memory" => {
+            log::info!("Running memory intensive task");
+            for _ in 0..3 {
+                let _ = memory_intensive();
+                let _ = string_processing();
+                thread::sleep(Duration::from_millis(50));
+            }
+        },
+        _ => {
+            log::info!("Running mixed workload");
+            let handles: Vec<_> = (0..4).map(|i| {
+                thread::spawn(move || {
+                    match i {
+                        0 => {
+                            let _ = binary_tree_sum(15);
+                            let _ = fibonacci(30);
+                        },
+                        1 => {
+                            let _ = memory_intensive();
+                        },
+                        2 => {
+                            let _ = vector_operations(2000);
+                            let _ = hash_map_operations(1000);
+                        },
+                        _ => {
+                            let _ = process_data_pipeline(150);
+                        }
                     }
-                },
-                1 => {
-                    // Memory-intensive thread
-                    log::info!("Starting memory-intensive work");
-                    for _ in 0..3 {
-                        let _ = memory_intensive();
-                        let _ = string_processing();
-                        thread::sleep(Duration::from_millis(50));
-                    }
-                },
-                2 => {
-                    // Data structure operations thread
-                    log::info!("Starting data structure operations");
-                    for _ in 0..2 {
-                        let _ = vector_operations(2000);
-                        let _ = hash_map_operations(1000);
-                        thread::sleep(Duration::from_millis(30));
-                    }
-                },
-                _ => {
-                    // Complex processing thread
-                    log::info!("Starting complex processing");
-                    for _ in 0..2 {
-                        let _ = process_data_pipeline(150);
-                        thread::sleep(Duration::from_millis(40));
-                    }
+                })
+            }).collect();
+
+            for handle in handles {
+                if let Err(e) = handle.join() {
+                    log::error!("Thread panicked: {:?}", e);
                 }
             }
-        })
-    }).collect();
-
-    // Do async work in parallel
-    tokio::spawn(async_complex_work());
-
-    // Wait for all threads to complete
-    for handle in handles {
-        handle.join().unwrap();
-    }
-
-    // Get profile data
-    if let Ok(report) = guard.report().build() {
-        log::info!("Built report");
-        if let Ok(profile) = report.pprof() {
-            log::info!("Generated pprof");
-            let mut content = Vec::new();
-            profile.encode(&mut content).unwrap();
-            log::info!("Encoded profile, size: {} bytes", content.len());
-            
-            let mut client = MyServiceClient::connect("http://[::1]:50051").await?;
-            log::info!("Connected to server");
-            let request = Request {
-                data: content,
-            };
-            let response = client.handle_request(request).await?;
-            log::info!("Server response: {:?}", String::from_utf8_lossy(&response.into_inner().result));
         }
     }
 
-    Ok(())
+    // Get and send profile data
+    match guard.report().build() {
+        Ok(report) => {
+            match report.pprof() {
+                Ok(profile) => {
+                    let mut content = Vec::new();
+                    if let Err(e) = profile.encode(&mut content) {
+                        log::error!("Failed to encode profile: {}", e);
+                        return Err(e.into());
+                    }
+                    
+                    let mut client = MyServiceClient::connect("http://[::1]:50051").await?;
+                    let request = Request {
+                        data: content,
+                    };
+                    let response = client.handle_request(request).await?;
+                    println!("Profile ID: {}", String::from_utf8_lossy(&response.into_inner().result));
+                    Ok(())
+                }
+                Err(e) => {
+                    log::error!("Failed to generate pprof: {}", e);
+                    Err(e.into())
+                }
+            }
+        }
+        Err(e) => {
+            log::error!("Failed to build report: {}", e);
+            Err(e.into())
+        }
+    }
 } 

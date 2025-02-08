@@ -26,8 +26,11 @@ use env_logger;
 use std::time::Instant;
 use ctrlc;
 use std::time::Duration;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::io::Write;
+use actix_web::web::Json;
+use reqwest::Client;
+use profiling::storage;
 
 /// Store for holding processed profiles in memory
 /// Maps profile IDs to their JSON representations
@@ -69,11 +72,14 @@ impl MyService for MyServiceImpl {
             Ok(Ok(Ok((profile, flame_data)))) => {
                 let profile_id = uuid::Uuid::new_v4().to_string();
                 
+                // Create profile directory
+                storage::create_profile_dir(&profile_id)?;
+
                 // Store processed data
                 self.profiles.write().await.insert(profile_id.clone(), json!(flame_data));
 
                 // Save raw profile
-                let mut raw_file = File::create(format!("profile_{}.pb", profile_id))
+                let mut raw_file = File::create(storage::get_profile_path(&profile_id, "pb"))
                     .map_err(|e| Status::internal(e.to_string()))?;
                 let mut buf = Vec::new();
                 profile.encode(&mut buf)
@@ -82,7 +88,7 @@ impl MyService for MyServiceImpl {
                     .map_err(|e| Status::internal(e.to_string()))?;
 
                 // Save processed data
-                let json_file = File::create(format!("profile_{}.json", profile_id))
+                let json_file = File::create(storage::get_profile_path(&profile_id, "json"))
                     .map_err(|e| Status::internal(e.to_string()))?;
                 serde_json::to_writer(json_file, &flame_data)
                     .map_err(|e| Status::internal(e.to_string()))?;
@@ -255,6 +261,68 @@ fn build_children(
     result
 }
 
+#[derive(Deserialize, Serialize)]
+struct TaskRequest {
+    #[serde(rename = "type")]
+    task_type: String,
+}
+
+// New HTTP handler for running tasks
+async fn run_task(
+    task_req: Json<TaskRequest>,
+    profiles: web::Data<ProfileStore>,
+) -> HttpResponse {
+    log::info!("Received task request: {}", task_req.task_type);
+    
+    // Forward request to daemon
+    let client = Client::new();
+    match client.post("http://[::1]:3001/task")
+        .json(&task_req)
+        .send()
+        .await
+    {
+        Ok(response) if response.status().is_success() => {
+            // Get profile ID from response
+            match response.json::<serde_json::Value>().await {
+                Ok(json) => {
+                    if let Some(profile_id) = json.get("profileId").and_then(|v| v.as_str()) {
+                        HttpResponse::Ok().json(json!({
+                            "status": "Task completed",
+                            "profileId": profile_id
+                        }))
+                    } else {
+                        HttpResponse::Ok().json(json!({
+                            "status": "Task started"
+                        }))
+                    }
+                }
+                Err(_) => {
+                    HttpResponse::Ok().json(json!({
+                        "status": "Task started"
+                    }))
+                }
+            }
+        }
+        Ok(response) => {
+            log::error!("Daemon returned error: {}", response.status());
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Task execution failed"
+            }))
+        }
+        Err(e) => {
+            log::error!("Failed to contact daemon: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": format!("Failed to start task: {}", e)
+            }))
+        }
+    }
+}
+
+// Add health check endpoint
+async fn health_check() -> HttpResponse {
+    HttpResponse::Ok().json(json!({"status": "ok"}))
+}
+
 /// Main entry point
 /// 
 /// Sets up:
@@ -267,6 +335,9 @@ fn build_children(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logger
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    // Initialize data directory
+    storage::init_data_dir()?;
 
     let profiles: ProfileStore = Arc::new(RwLock::new(HashMap::new()));
     let grpc_profiles = profiles.clone();
@@ -295,7 +366,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .max_age(3600)
             )
             .app_data(web::Data::new(profiles.clone()))
+            .route("/health", web::get().to(health_check))
             .route("/api/profiles/{id}", web::get().to(get_profile))
+            .route("/api/tasks/run", web::post().to(run_task))
     })
     .bind("[::1]:3000")?
     .workers(1)

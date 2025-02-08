@@ -4,7 +4,11 @@ use pprof::protos::Message;
 use std::thread;
 use std::time::Duration;
 
-fn main() {
+mod proto;
+
+
+#[tokio::main]
+async fn main() {
     // Create a guard with higher sampling frequency (1000 Hz)
     let guard = ProfilerGuard::new(1000).unwrap();
 
@@ -23,6 +27,11 @@ fn main() {
             let mut content = Vec::new();
             profile.encode(&mut content).unwrap();
             println!("Profile size: {} bytes", content.len());
+
+            // send pprof data to the server
+            let client = PprofClient::connect("http://[::1]:50051").await.unwrap();
+            let request = SaveProfileRequest { profile: Some(Profile { data: content }) };
+            let _ = client.save_profile(request).await;
         }
     }
 }

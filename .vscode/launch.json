@@ -7,39 +7,70 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'profiling'",
+            "name": "Debug Server",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=profiling",
+                    "--bin=server",
                     "--package=profiling"
                 ],
                 "filter": {
-                    "name": "profiling",
+                    "name": "server",
                     "kind": "bin"
                 }
             },
             "args": [],
+            "env": {
+                "RUST_LOG": "debug"
+            },
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'profiling'",
+            "name": "Debug Daemon",
             "cargo": {
                 "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=profiling",
+                    "build",
+                    "--bin=daemon",
                     "--package=profiling"
                 ],
                 "filter": {
-                    "name": "profiling",
+                    "name": "daemon",
                     "kind": "bin"
                 }
             },
             "args": [],
+            "env": {
+                "RUST_LOG": "debug"
+            },
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=profiling"
+                ],
+                "filter": {
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "env": {
+                "RUST_LOG": "debug"
+            },
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Server + Daemon",
+            "configurations": ["Debug Server", "Debug Daemon"]
         }
     ]
 }

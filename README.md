@@ -273,7 +273,21 @@ kubectl describe pod <pod-name> -n profiling-system | grep -A 5 Limits
 
 ### Development Tips
 
-1. Local Testing
+1. Debugging
+```bash
+# VS Code debugging
+# Press F5 to start debugging the server or daemon
+# Or use the "Run and Debug" sidebar:
+# - "Debug Server": Launch server with debugger
+# - "Debug Daemon": Launch daemon with debugger
+# - "Server + Daemon": Launch both with debugger
+
+# Set breakpoints in VS Code
+# Use debug console to evaluate expressions
+# Use watch window to monitor variables
+```
+
+2. Local Testing
 ```bash
 # Run with debug logging
 RUST_LOG=debug cargo run --bin server
@@ -282,7 +296,7 @@ RUST_LOG=debug cargo run --bin server
 curl -X POST http://localhost:3000/api/tasks/run -H "Content-Type: application/json" -d '{"type":"cpu"}'
 ```
 
-2. Container Debugging
+3. Container Debugging
 ```bash
 # Shell into containers
 docker exec -it <container-id> /bin/bash
@@ -291,11 +305,17 @@ docker exec -it <container-id> /bin/bash
 docker-compose logs -f server
 ```
 
-3. Performance Monitoring
+4. Performance Monitoring
 ```bash
 # Monitor container resources
 docker stats
 
 # Check profile data size
 du -sh data/*
-``` 
+```
+
+5. Common Debug Points
+- Task execution flow: Set breakpoints in `execute_task` function
+- Profile processing: Debug `handle_request` in server
+- Data storage: Monitor `create_profile_dir` and `get_profile_path`
+- Error handling: Check task message handling in daemon 

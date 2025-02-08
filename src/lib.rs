@@ -109,22 +109,41 @@ pub mod tasks {
     }
 }
 
+/// Storage utilities for managing profile data
 pub mod storage {
     use std::fs;
     use std::path::PathBuf;
     use std::io;
 
+    /// Initialize the data directory for storing profiles
+    /// 
+    /// Creates the base directory if it doesn't exist
     pub fn init_data_dir() -> io::Result<()> {
         fs::create_dir_all("data")?;
         Ok(())
     }
 
+    /// Create a new directory for a specific profile
+    /// 
+    /// # Arguments
+    /// * `profile_id` - Unique identifier for the profile
+    /// 
+    /// # Returns
+    /// * `PathBuf` - Path to the created directory
     pub fn create_profile_dir(profile_id: &str) -> io::Result<PathBuf> {
         let dir_path = PathBuf::from("data").join(profile_id);
         fs::create_dir_all(&dir_path)?;
         Ok(dir_path)
     }
 
+    /// Get the path for a profile file
+    /// 
+    /// # Arguments
+    /// * `profile_id` - Unique identifier for the profile
+    /// * `extension` - File extension (e.g., "pb" or "json")
+    /// 
+    /// # Returns
+    /// * `PathBuf` - Full path to the profile file
     pub fn get_profile_path(profile_id: &str, extension: &str) -> PathBuf {
         PathBuf::from("data")
             .join(profile_id)

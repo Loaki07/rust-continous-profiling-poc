@@ -4,13 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-pprof = { version = "0.14", features = [
-    "flamegraph",
-    "prost-codec",
-] }
+pprof = { version = "0.14", features = ["flamegraph", "prost-codec"] }
 tonic = { version = "0.12", features = ["prost"] }
 prost = "0.13.4"
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "sync"] }
+serde_json = "1.0"
+actix-web = { version = "4.0", features = ["macros"] }
+actix-cors = "0.6"
+uuid = { version = "1.0", features = ["v4"] }
+log = "0.4"
+env_logger = "0.10"
+ctrlc = "3.4"
+rayon = "1.8"
+serde = { version = "1.0", features = ["derive"] }
 
 [build-dependencies]
 tonic-build = "0.12"

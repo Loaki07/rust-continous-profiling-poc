@@ -1,0 +1,17 @@
+syntax = "proto3";
+package myservice;
+
+// Define the service
+service MyService {
+    // Define RPC methods
+    rpc HandleRequest (Request) returns (Response);
+}
+
+// Define message types
+message Request {
+    bytes data = 1;
+}
+
+message Response {
+    bytes result = 1;
+} 

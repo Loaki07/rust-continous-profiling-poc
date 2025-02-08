@@ -1,1 +1,22 @@
+# Rust
 /target
+**/*.rs.bk
+Cargo.lock
+profile.pb
+profile.json
+
+# Node/Vue
+/web/node_modules
+/web/dist
+/web/.env
+/web/.env.*
+/web/.vite
+/web/.cache
+/web/package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

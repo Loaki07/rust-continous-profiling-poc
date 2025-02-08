@@ -1,0 +1,14 @@
+syntax = "proto3";
+package pprof_proto;
+
+message Profile {
+    bytes data = 1;
+}
+
+message SaveProfileRequest {
+    optional Profile profile = 1;
+}
+
+service Pprof {
+    rpc SaveProfile(SaveProfileRequest) returns (Profile);
+} 

@@ -1,0 +1,19 @@
+{
+    "name": "root",
+    "value": 13,
+    "children": [
+        {
+            "id": "1",
+            "name": "backtrace::backtrace::libunwind::trace",
+            "value": 13,
+            "children": [
+                {
+                    "id": "2",
+                    "name": "backtrace::backtrace::trace_unsynchronized",
+                    "value": 0,
+                    "children": []
+                }
+            ]
+        }
+    ]
+}

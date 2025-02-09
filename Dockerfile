@@ -7,7 +7,11 @@ RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     pkg-config \
     libssl-dev \
+    cmake \
     && rm -rf /var/lib/apt/lists/*
+
+# Verify protoc installation
+RUN protoc --version
 
 # Copy manifests
 COPY Cargo.toml Cargo.lock ./
@@ -27,6 +31,9 @@ RUN rm -rf src proto
 # Copy source code
 COPY src ./src
 COPY proto ./proto
+
+# Set environment variable for protoc
+ENV PROTOC=/usr/bin/protoc
 
 # Build the application
 RUN cargo build --bin server --release

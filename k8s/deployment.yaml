@@ -20,6 +20,8 @@ kind: Deployment
 metadata:
   name: profiling-server
   namespace: profiling-system
+  labels:
+    app: profiling-server
 spec:
   replicas: 1
   selector:
@@ -33,13 +35,7 @@ spec:
       containers:
       - name: server
         image: profiling-server:latest
-        resources:
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
           name: http
@@ -51,6 +47,33 @@ spec:
         env:
         - name: RUST_LOG
           value: "info"
+        resources:
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+              - ALL
       volumes:
       - name: profile-data
         persistentVolumeClaim:

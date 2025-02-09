@@ -32,6 +32,8 @@ spec:
       labels:
         app: profiling-server
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
       - name: server
         image: profiling-server:latest
